@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Search, Plus, Pencil } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { NewReceitaForm } from '@/components/NewReceitaForm'
 import { EditReceitaForm } from '@/components/EditReceitaForm'
 

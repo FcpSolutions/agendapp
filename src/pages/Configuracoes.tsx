@@ -23,14 +23,6 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AlertCircle } from 'lucide-react'
 
-interface UserProfile {
-  id: string
-  nome_completo: string | null
-  crm: string | null
-  telefone: string | null
-  email: string | null
-}
-
 export default function Configuracoes() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -75,7 +67,7 @@ export default function Configuracoes() {
           console.log('Perfil não encontrado. Criando...')
           
           // Criar um novo perfil
-          const { data: newProfile, error: createError } = await supabase
+          const { error: createError } = await supabase
             .from('profiles')
             .insert([
               {

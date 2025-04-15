@@ -17,6 +17,36 @@ interface Patient {
   email: string
   telefone: string
   created_at: string
+  cpf?: string
+  data_nascimento?: string
+  endereco?: {
+    cep: string
+    logradouro: string
+    bairro: string
+    cidade: string
+    estado: string
+    numero: string
+    complemento: string
+  }
+}
+
+// Interface compatível com o esperado pelo NewPatientForm
+interface EditablePatient {
+  id: string
+  nome: string
+  cpf: string
+  data_nascimento: string
+  email: string
+  telefone: string
+  endereco: {
+    cep: string
+    logradouro: string
+    bairro: string
+    cidade: string
+    estado: string
+    numero: string
+    complemento: string
+  }
 }
 
 export function PatientList() {
@@ -24,7 +54,7 @@ export function PatientList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isNewPatientDialogOpen, setIsNewPatientDialogOpen] = useState(false)
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<EditablePatient | null>(null)
 
   const fetchPatients = async () => {
     try {
@@ -65,7 +95,24 @@ export function PatientList() {
   }
 
   const handleEdit = (patient: Patient) => {
-    setSelectedPatient(patient)
+    // Converter o Patient para EditablePatient
+    setSelectedPatient({
+      id: patient.id,
+      nome: patient.nome,
+      cpf: patient.cpf || '',
+      data_nascimento: patient.data_nascimento || '',
+      email: patient.email,
+      telefone: patient.telefone,
+      endereco: patient.endereco || {
+        cep: '',
+        logradouro: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        numero: '',
+        complemento: ''
+      }
+    })
     setIsNewPatientDialogOpen(true)
   }
 
