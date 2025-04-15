@@ -8,7 +8,6 @@ import {
   Users,
   Calendar,
   FileText,
-  Receipt,
   DollarSign,
   BarChart2,
   Settings,

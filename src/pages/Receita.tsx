@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit, Trash2, FileText } from "lucide-react"
+import { Plus, Search, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"

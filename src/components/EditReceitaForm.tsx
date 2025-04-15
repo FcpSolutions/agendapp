@@ -12,22 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-interface Receita {
-  id: string
-  patient_id: string
-  data: string
-  tipo_pagamento: string
-  operadora: string
-  plano_saude: string
-  valor: number
-  observacoes: string
-  created_at: string
-  patient: {
-    id: string
-    nome: string
-  }
-}
-
 interface EditReceitaFormProps {
   isOpen: boolean
   onClose: () => void

@@ -208,12 +208,6 @@ export default function Agenda() {
     setIsEditAppointmentOpen(true);
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return format(date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
-  }
-
-  // Nova função para formatar data em formato curto
   const formatShortDate = (dateString: string) => {
     const date = new Date(dateString)
     return format(date, "dd/MM", { locale: ptBR })

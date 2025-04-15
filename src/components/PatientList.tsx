@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { PatientCard } from './PatientCard'
 import { Button } from './ui/button'
 import { Plus } from 'lucide-react'
-import NewPatientForm from './NewPatientForm'
+import { NewPatientForm } from './NewPatientForm'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ export function PatientList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isNewPatientDialogOpen, setIsNewPatientDialogOpen] = useState(false)
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 
   const fetchPatients = async () => {
     try {
@@ -63,6 +64,11 @@ export function PatientList() {
     }
   }
 
+  const handleEdit = (patient: Patient) => {
+    setSelectedPatient(patient)
+    setIsNewPatientDialogOpen(true)
+  }
+
   if (loading) {
     return <div className="text-center py-8">Carregando...</div>
   }
@@ -76,7 +82,10 @@ export function PatientList() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Pacientes</h1>
         <Button
-          onClick={() => setIsNewPatientDialogOpen(true)}
+          onClick={() => {
+            setSelectedPatient(null)
+            setIsNewPatientDialogOpen(true)
+          }}
           className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -87,12 +96,16 @@ export function PatientList() {
       <Dialog open={isNewPatientDialogOpen} onOpenChange={setIsNewPatientDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Paciente</DialogTitle>
+            <DialogTitle>{selectedPatient ? 'Editar Paciente' : 'Novo Paciente'}</DialogTitle>
           </DialogHeader>
-          <NewPatientForm onClose={() => {
-            setIsNewPatientDialogOpen(false)
-            fetchPatients()
-          }} />
+          <NewPatientForm 
+            onClose={() => {
+              setIsNewPatientDialogOpen(false)
+              fetchPatients()
+            }} 
+            isOpen={isNewPatientDialogOpen}
+            editingPatient={selectedPatient}
+          />
         </DialogContent>
       </Dialog>
 
@@ -107,6 +120,7 @@ export function PatientList() {
               key={patient.id}
               patient={patient}
               onDelete={() => handleDelete(patient.id)}
+              onEdit={() => handleEdit(patient)}
             />
           ))
         )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,21 +7,21 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { AlertCircle } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -37,7 +37,6 @@ export default function Configuracoes() {
   const [saving, setSaving] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [formData, setFormData] = useState({
     nome_completo: '',
     crm: '',
@@ -54,21 +53,16 @@ export default function Configuracoes() {
 
   const fetchProfile = async () => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError) {
-        console.error('Erro ao obter usuário:', userError)
-        toast.error('Erro ao obter usuário')
-        return
-      }
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         navigate('/login')
         return
       }
 
-      // Obter o e-mail diretamente do usuário autenticado
       const userEmail = user.email
+      setFormData(prevData => ({ ...prevData, email: userEmail || '' }))
 
       const { data, error } = await supabase
         .from('profiles')
@@ -77,8 +71,10 @@ export default function Configuracoes() {
         .single()
 
       if (error) {
-        // Se o perfil não existir, vamos criá-lo
         if (error.code === 'PGRST116') {
+          console.log('Perfil não encontrado. Criando...')
+          
+          // Criar um novo perfil
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert([
@@ -87,7 +83,7 @@ export default function Configuracoes() {
                 nome_completo: '',
                 crm: '',
                 telefone: '',
-                created_at: new Date().toISOString(),
+                email: userEmail,
                 updated_at: new Date().toISOString()
               }
             ])
@@ -99,7 +95,6 @@ export default function Configuracoes() {
             throw createError
           }
 
-          setProfile(newProfile)
           setFormData({
             ...formData,
             nome_completo: '',
@@ -112,8 +107,6 @@ export default function Configuracoes() {
         throw error
       }
 
-      setProfile(data)
-      
       // Atualizar o formData com os dados do perfil e e-mail
       const updatedFormData = {
         nome_completo: data.nome_completo || '',
@@ -292,39 +285,54 @@ export default function Configuracoes() {
             <Button
               onClick={handleSave}
               disabled={saving}
+              className="mt-4"
             >
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-destructive">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
+          <CardTitle>Segurança da Conta</CardTitle>
           <CardDescription>
-            Ações irreversíveis para sua conta
+            Altere sua senha ou gerencie sua conta
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button
-            variant="destructive"
-            onClick={() => setIsDeleteDialogOpen(true)}
+            variant="outline"
+            onClick={() => setIsChangePasswordOpen(true)}
+            className="w-full sm:w-auto"
           >
-            Excluir Conta
+            Alterar Senha
           </Button>
         </CardContent>
+        <CardFooter>
+          <div className="w-full">
+            <Button
+              variant="destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              Excluir Conta
+            </Button>
+            <p className="text-sm text-gray-500 mt-2">
+              Essa ação não pode ser desfeita. Todos os seus dados serão permanentemente excluídos.
+            </p>
+          </div>
+        </CardFooter>
       </Card>
 
-      {/* Modal de Alteração de Senha */}
-      <AlertDialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Alterar Senha</AlertDialogTitle>
-            <AlertDialogDescription>
-              Digite sua senha atual e a nova senha abaixo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Escolha uma nova senha segura para sua conta
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -356,43 +364,70 @@ export default function Configuracoes() {
                 onChange={(e) => setFormData({ ...formData, confirmar_senha: e.target.value })}
               />
             </div>
+
+            {formData.nova_senha && formData.confirmar_senha && formData.nova_senha !== formData.confirmar_senha && (
+              <div className="text-red-500 text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                As senhas não coincidem
+              </div>
+            )}
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsChangePasswordOpen(false)}>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsChangePasswordOpen(false)}
+            >
               Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleChangePassword} disabled={saving}>
-              {saving ? 'Alterando...' : 'Alterar Senha'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={saving || !formData.senha_atual || !formData.nova_senha || !formData.confirmar_senha || (formData.nova_senha !== formData.confirmar_senha)}
+            >
+              {saving ? 'Salvando...' : 'Salvar Senha'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal de Confirmação de Exclusão */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta
-              e removerá seus dados de nossos servidores.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Conta</DialogTitle>
+            <DialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta e removerá seus dados dos servidores.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-red-50 text-red-700 p-4 rounded-lg flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 mt-0.5" />
+              <div>
+                <h4 className="font-semibold">Aviso Importante</h4>
+                <p className="text-sm mt-1">
+                  Todos os seus dados serão excluídos, incluindo pacientes, consultas, receitas e outros registros. Considere exportar seus dados antes de excluir sua conta.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
+            </Button>
+            <Button
+              variant="destructive"
               onClick={handleDeleteAccount}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={saving}
             >
-              {saving ? 'Excluindo...' : 'Sim, excluir conta'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {saving ? 'Excluindo...' : 'Excluir Permanentemente'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

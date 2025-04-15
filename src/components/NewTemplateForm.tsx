@@ -55,7 +55,7 @@ export function NewTemplateForm({ isOpen, onClose, onSuccess }: NewTemplateFormP
       if (tipo === 'arquivo' && arquivo) {
         const fileExt = arquivo.name.split('.').pop()
         const fileName = `${Math.random()}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('templates')
           .upload(fileName, arquivo)
 

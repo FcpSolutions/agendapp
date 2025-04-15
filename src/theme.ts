@@ -1,7 +1,4 @@
-import { theme as baseTheme } from '@chakra-ui/theme'
-
 export const theme = {
-  ...baseTheme,
   styles: {
     global: {
       body: {

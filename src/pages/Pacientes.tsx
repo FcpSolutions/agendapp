@@ -29,7 +29,23 @@ export default function Pacientes() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
+  const [editingPatient, setEditingPatient] = useState<{
+    id: string
+    nome: string
+    cpf: string
+    data_nascimento: string
+    email: string
+    telefone: string
+    endereco: {
+      cep: string
+      logradouro: string
+      bairro: string
+      cidade: string
+      estado: string
+      numero: string
+      complemento: string
+    }
+  } | null>(null)
 
   const fetchPatients = async () => {
     try {
@@ -63,7 +79,23 @@ export default function Pacientes() {
   }
 
   const handleEditPatient = (patient: Patient) => {
-    setEditingPatient(patient)
+    setEditingPatient({
+      id: patient.id,
+      nome: patient.nome,
+      cpf: patient.cpf || '',
+      data_nascimento: patient.data_nascimento || '',
+      email: patient.email,
+      telefone: patient.telefone,
+      endereco: patient.endereco || {
+        cep: '',
+        logradouro: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        numero: '',
+        complemento: ''
+      }
+    })
     setShowNewPatientForm(true)
   }
 
