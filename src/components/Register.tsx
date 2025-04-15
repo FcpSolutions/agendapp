@@ -52,9 +52,11 @@ export default function Register() {
       if (import.meta.env.PROD) {
         // URL de produção (ajuste para a URL correta do seu site)
         redirectUrl = 'https://agendapp-gilt.vercel.app/login';
+        console.log('Ambiente de produção detectado, usando URL:', redirectUrl);
       } else {
         // URL local para desenvolvimento
         redirectUrl = `${window.location.origin}/login`;
+        console.log('Ambiente de desenvolvimento detectado, usando URL:', redirectUrl);
       }
       
       console.log('URL de redirecionamento:', redirectUrl);
