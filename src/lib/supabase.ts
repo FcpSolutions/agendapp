@@ -32,11 +32,25 @@ export async function signUp(email: string, password: string) {
   try {
     console.log('Tentando registrar usuário com:', { email })
     
+    // Determinar a URL de base correta conforme o ambiente
+    let redirectUrl = '';
+    
+    // Verificar se estamos em ambiente de produção (Vercel)
+    if (import.meta.env.PROD) {
+      // URL de produção (ajuste para a URL correta do seu site)
+      redirectUrl = 'https://agendapp-gilt.vercel.app/login';
+    } else {
+      // URL local para desenvolvimento
+      redirectUrl = `${window.location.origin}/login`;
+    }
+    
+    console.log('URL de redirecionamento:', redirectUrl);
+    
     return await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: redirectUrl,
       }
     })
   } catch (error) {
