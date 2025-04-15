@@ -29,10 +29,20 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signUp(email: string, password: string) {
-  return await supabase.auth.signUp({
-    email,
-    password,
-  })
+  try {
+    console.log('Tentando registrar usuário com:', { email })
+    
+    return await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
+    })
+  } catch (error) {
+    console.error('Erro na função signUp:', error)
+    throw error
+  }
 }
 
 export async function signOut() {

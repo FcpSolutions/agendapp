@@ -22,18 +22,62 @@ export default function Register() {
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    // Validações básicas
+    if (!email.trim()) {
+      setError('O email é obrigatório');
+      return;
+    }
+    
+    if (!password.trim()) {
+      setError('A senha é obrigatória');
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    
     setLoading(true)
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('Iniciando registro com:', { email });
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`
+        }
       })
-      if (error) throw error
+      
+      console.log('Resposta do registro:', { data, error });
+      
+      if (error) {
+        console.error('Erro no registro:', error);
+        throw error;
+      }
+      
       setShowConfirmDialog(true)
     } catch (error: any) {
-      setError(error.message)
+      console.error('Erro capturado no registro:', error);
+      
+      let errorMessage = 'Erro ao criar conta. Tente novamente.';
+      
+      // Tratamento específico para erros comuns
+      if (error.message) {
+        if (error.message.includes('email')) {
+          errorMessage = 'Email inválido ou já está em uso. Verifique e tente novamente.';
+        } else if (error.message.includes('password')) {
+          errorMessage = 'Senha inválida. A senha deve ter pelo menos 6 caracteres.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false)
     }
@@ -70,9 +114,10 @@ export default function Register() {
                   placeholder="Sua senha"
                   required
                 />
+                <p className="text-xs text-gray-500">A senha deve ter pelo menos 6 caracteres</p>
               </div>
               {error && (
-                <div className="text-sm text-red-500">{error}</div>
+                <div className="text-sm text-red-500 p-2 bg-red-50 rounded-md">{error}</div>
               )}
               <Button 
                 type="submit" 
