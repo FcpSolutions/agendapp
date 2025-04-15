@@ -129,10 +129,20 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
               break
           }
           
+          // Formatação manual da data para manter o fuso horário local
+          const year = appointmentDate.getFullYear();
+          const month = String(appointmentDate.getMonth() + 1).padStart(2, '0');
+          const day = String(appointmentDate.getDate()).padStart(2, '0');
+          const hours = String(appointmentDate.getHours()).padStart(2, '0');
+          const minutes = String(appointmentDate.getMinutes()).padStart(2, '0');
+          const seconds = String(appointmentDate.getSeconds()).padStart(2, '0');
+          
+          const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+          
           appointments.push({
             patient_id: formData.patient_id,
             user_id: user.id,
-            date: appointmentDate.toISOString(),
+            date: formattedDate,
             duration: parseInt(formData.duration),
             notes: formData.notes,
             value: parseFloat(formData.value),
@@ -143,10 +153,21 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
           })
         }
       } else {
+        // Formatação manual da data e hora para manter fuso horário local
+        const dateObj = new Date(`${formData.date}T${formData.time}`);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+        
+        const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+        
         appointments.push({
           patient_id: formData.patient_id,
           user_id: user.id,
-          date: new Date(`${formData.date}T${formData.time}`).toISOString().replace('Z', ''),
+          date: formattedDate,
           duration: parseInt(formData.duration),
           notes: formData.notes,
           value: parseFloat(formData.value),

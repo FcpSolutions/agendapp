@@ -24,6 +24,11 @@ interface Evolucao {
   patient: Patient
 }
 
+interface DadosProfissional {
+  nome_completo: string
+  crm: string
+}
+
 export default function Evolucao() {
   const [isNewEvolucaoOpen, setIsNewEvolucaoOpen] = useState(false)
   const [isEditEvolucaoOpen, setIsEditEvolucaoOpen] = useState(false)
@@ -43,10 +48,43 @@ export default function Evolucao() {
   const [reportEvolucoes, setReportEvolucoes] = useState<Evolucao[]>([])
   const [loadingReport, setLoadingReport] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  const [dadosProfissional, setDadosProfissional] = useState<DadosProfissional>({
+    nome_completo: '',
+    crm: ''
+  })
+
+  const fetchDadosProfissional = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) return
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('nome_completo, crm')
+        .eq('id', user.id)
+        .single()
+      
+      if (error) {
+        console.error('Erro ao buscar dados do profissional:', error)
+        return
+      }
+      
+      if (data) {
+        setDadosProfissional({
+          nome_completo: data.nome_completo || '',
+          crm: data.crm || ''
+        })
+      }
+    } catch (err) {
+      console.error('Erro ao buscar dados do profissional:', err)
+    }
+  }
 
   useEffect(() => {
     fetchEvolucoes()
     fetchPatients()
+    fetchDadosProfissional()
   }, [])
 
   useEffect(() => {
@@ -176,6 +214,9 @@ export default function Evolucao() {
         setLoadingReport(false);
         return;
       }
+      
+      // Certifique-se de ter os dados do profissional atualizados
+      await fetchDadosProfissional()
       
       const { data, error } = await supabase
         .from('evolucoes')
@@ -465,9 +506,19 @@ export default function Evolucao() {
               
               {reportEvolucoes.length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-xl font-semibold mb-2">Dados do Paciente</h2>
-                  <p className="text-lg">Nome: {reportEvolucoes[0].patient.nome}</p>
-                  <p className="text-lg">Período: {format(new Date(reportData.startDate), "dd/MM/yyyy", { locale: ptBR })} a {format(new Date(reportData.endDate), "dd/MM/yyyy", { locale: ptBR })}</p>
+                  <div className="flex flex-col md:flex-row md:gap-6 md:justify-between">
+                    <div className="md:w-1/2">
+                      <h2 className="text-xl font-semibold mb-2">Dados do Paciente</h2>
+                      <p className="text-lg">Nome: {reportEvolucoes[0].patient.nome}</p>
+                      <p className="text-lg">Período: {format(new Date(reportData.startDate), "dd/MM/yyyy", { locale: ptBR })} a {format(new Date(reportData.endDate), "dd/MM/yyyy", { locale: ptBR })}</p>
+                    </div>
+                    
+                    <div className="md:w-1/2 mt-4 md:mt-0">
+                      <h2 className="text-xl font-semibold mb-2">Informações do Profissional</h2>
+                      <p className="text-lg">Nome Completo: {dadosProfissional.nome_completo || 'Não informado'}</p>
+                      <p className="text-lg">Número do Conselho Regional: {dadosProfissional.crm || 'Não informado'}</p>
+                    </div>
+                  </div>
                 </div>
               )}
               

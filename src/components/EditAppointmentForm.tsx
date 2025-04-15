@@ -142,15 +142,23 @@ export function EditAppointmentForm({ appointment, onClose, isOpen, onSuccess }:
       if (userError) throw new Error('Erro de autenticação: ' + userError.message)
       if (!user) throw new Error('Usuário não autenticado')
 
-      // Formatação simples sem ajuste de fuso horário
-      const dateTimeISO = `${formData.date}T${formData.time}:00`;
-      console.log('Data local a ser salva:', dateTimeISO);
+      // Formatação manual da data e hora para manter fuso horário local
+      const dateObj = new Date(`${formData.date}T${formData.time}`);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+      
+      const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      console.log('Data local a ser salva:', formattedDate);
 
       const { error } = await supabase
         .from('appointments')
         .update({
           patient_id: formData.patient_id,
-          date: dateTimeISO,
+          date: formattedDate,
           duration: parseInt(formData.duration),
           notes: formData.notes,
           status: formData.status,

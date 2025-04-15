@@ -256,7 +256,7 @@ export default function Configuracoes() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="crm">CRM</Label>
+            <Label htmlFor="crm">Número do Conselho Regional</Label>
             <Input
               id="crm"
               value={formData.crm}
