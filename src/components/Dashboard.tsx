@@ -26,6 +26,7 @@ import Receita from '@/pages/Receita'
 import Despesas from '@/pages/Despesas'
 import Relatorios from '@/pages/Relatorios'
 import Configuracoes from '@/pages/Configuracoes'
+import Documentos from '@/pages/Documentos'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -53,7 +54,7 @@ export default function Dashboard() {
       {/* Menu Lateral */}
       <aside className={`bg-gray-900 text-white ${isCollapsed ? 'w-16' : 'w-64'} transition-all duration-300 ease-in-out`}>
         <div className="p-4 flex justify-between items-center">
-          {!isCollapsed && <h2 className="text-xl font-bold">AgendApp</h2>}
+          {!isCollapsed && <h2 className="text-xl font-bold">Dr. Calendário</h2>}
           <Button 
             variant="ghost" 
             size="icon"
@@ -101,6 +102,7 @@ export default function Dashboard() {
             <Route path="evolucao" element={<Evolucao />} />
             <Route path="receitas" element={<Receita />} />
             <Route path="despesas" element={<Despesas />} />
+            <Route path="documentos" element={<Documentos />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<DashboardHome />} />

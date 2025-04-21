@@ -34,7 +34,7 @@ export default function Login() {
       <Card className="w-[380px] border-none shadow-lg hover:shadow-xl transition-all duration-300">
         <CardHeader className="space-y-2 pb-2">
           <CardTitle className="text-2xl font-bold text-center text-blue-600 bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
-            Dr. Consulta
+            Dr. Calendário
           </CardTitle>
           <CardDescription className="text-center text-gray-600">
             Entre com sua conta para acessar o sistema
