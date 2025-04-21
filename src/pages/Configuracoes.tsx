@@ -19,9 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AlertCircle } from 'lucide-react'
+import { PerfilDocumentos } from '@/components/PerfilDocumentos'
 
 export default function Configuracoes() {
   const navigate = useNavigate()
@@ -232,90 +234,94 @@ export default function Configuracoes() {
   console.log('Renderizando componente com formData:', formData)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Configurações</h1>
-        <p className="text-gray-600">Gerencie suas informações pessoais e preferências</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações Pessoais</CardTitle>
-          <CardDescription>
-            Atualize suas informações de perfil
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nome_completo">Nome Completo</Label>
-            <Input
-              id="nome_completo"
-              value={formData.nome_completo}
-              onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="crm">Número do Conselho Regional</Label>
-            <Input
-              id="crm"
-              value={formData.crm}
-              onChange={(e) => setFormData({ ...formData, crm: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="telefone">Telefone</Label>
-            <Input
-              id="telefone"
-              value={formData.telefone}
-              onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="mt-4"
-            >
-              {saving ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Segurança da Conta</CardTitle>
-          <CardDescription>
-            Altere sua senha ou gerencie sua conta
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            variant="outline"
-            onClick={() => setIsChangePasswordOpen(true)}
-            className="w-full sm:w-auto"
-          >
-            Alterar Senha
-          </Button>
-        </CardContent>
-        <CardFooter>
-          <div className="w-full">
-            <Button
-              variant="destructive"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              Excluir Conta
-            </Button>
-            <p className="text-sm text-gray-500 mt-2">
-              Essa ação não pode ser desfeita. Todos os seus dados serão permanentemente excluídos.
-            </p>
-          </div>
-        </CardFooter>
-      </Card>
+    <div className="container mx-auto py-6 max-w-3xl">
+      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
+      
+      <Tabs defaultValue="perfil" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="perfil">Perfil</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="perfil">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Informações do Perfil</CardTitle>
+              <CardDescription>
+                Atualize suas informações pessoais e profissionais
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome_completo">Nome Completo</Label>
+                <Input
+                  id="nome_completo"
+                  value={formData.nome_completo}
+                  onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="crm">Registro Profissional</Label>
+                <Input
+                  id="crm"
+                  value={formData.crm}
+                  onChange={(e) => setFormData({ ...formData, crm: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  disabled
+                  className="bg-gray-100"
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="justify-between">
+              <div>
+                <Button variant="outline" onClick={() => setIsChangePasswordOpen(true)}>
+                  Alterar Senha
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                  Excluir Conta
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="documentos">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Documentos Personalizados</CardTitle>
+              <CardDescription>
+                Configure seu papel timbrado e assinatura para uso em documentos e relatórios
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PerfilDocumentos />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
         <DialogContent>
