@@ -11,6 +11,10 @@ interface Patient {
   email: string
   telefone: string
   created_at: string
+  ativo?: boolean
+  tipo_paciente?: string
+  convenio_nome?: string
+  convenio_operadora?: string
   cpf?: string
   data_nascimento?: string
   endereco?: {
@@ -36,6 +40,9 @@ export default function Pacientes() {
     data_nascimento: string
     email: string
     telefone: string
+    tipo_paciente?: string
+    convenio_nome?: string
+    convenio_operadora?: string
     endereco: {
       cep: string
       logradouro: string
@@ -56,11 +63,59 @@ export default function Pacientes() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setPatients(data || [])
+
+      const { data: agendamentos } = await supabase
+        .from('appointments')
+        .select('patient_id, patient_type, convenio_nome, convenio_operadora, date')
+        .order('date', { ascending: false })
+
+      const ultimoTipo = new Map<string, { patient_type?: string; convenio_nome?: string; convenio_operadora?: string }>()
+      for (const agendamento of agendamentos || []) {
+        if (!agendamento.patient_id || ultimoTipo.has(agendamento.patient_id)) continue
+        if (agendamento.patient_type !== 'particular' && agendamento.patient_type !== 'convenio') continue
+        ultimoTipo.set(agendamento.patient_id, agendamento)
+      }
+
+      setPatients((data || []).map((patient) => {
+        if (patient.tipo_paciente === 'particular' || patient.tipo_paciente === 'convenio') {
+          return patient
+        }
+        const agenda = ultimoTipo.get(patient.id)
+        if (!agenda) return { ...patient, tipo_paciente: 'particular' }
+        return {
+          ...patient,
+          tipo_paciente: agenda.patient_type,
+          convenio_nome: patient.convenio_nome || agenda.convenio_nome || '',
+          convenio_operadora: patient.convenio_operadora || agenda.convenio_operadora || '',
+        }
+      }))
     } catch (error: any) {
       setError(error.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleAtivo = async (patient: Patient) => {
+    const novoAtivo = patient.ativo === false
+    const mensagem = novoAtivo
+      ? `Reativar ${patient.nome}? O paciente volta a aparecer nas listas para novos registros. O histórico já estava preservado.`
+      : `Inativar ${patient.nome}? O histórico permanece na agenda, na ficha clínica, na evolução e no financeiro. O paciente deixa de aparecer apenas nas listas para novos registros.`
+
+    if (!confirm(mensagem)) return
+
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({ ativo: novoAtivo })
+        .eq('id', patient.id)
+
+      if (error) throw error
+      setPatients(patients.map((item) => (
+        item.id === patient.id ? { ...item, ativo: novoAtivo } : item
+      )))
+    } catch (error: any) {
+      setError(error.message)
     }
   }
 
@@ -86,6 +141,9 @@ export default function Pacientes() {
       data_nascimento: patient.data_nascimento || '',
       email: patient.email,
       telefone: patient.telefone,
+      tipo_paciente: patient.tipo_paciente || 'particular',
+      convenio_nome: patient.convenio_nome || '',
+      convenio_operadora: patient.convenio_operadora || '',
       endereco: patient.endereco || {
         cep: '',
         logradouro: '',
@@ -133,16 +191,29 @@ export default function Pacientes() {
           <p className="text-gray-500 text-center">Nenhum paciente cadastrado</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <>
+        <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-[#0f9f8f]" />
+            Particular
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-[#5b4bd6]" />
+            Convênio
+          </span>
+        </div>
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 xl:grid-cols-3">
           {patients.map(patient => (
             <PatientCard 
               key={patient.id} 
               patient={patient}
               onDelete={handleDeletePatient}
               onEdit={handleEditPatient}
+              onToggleAtivo={handleToggleAtivo}
             />
           ))}
         </div>
+        </>
       )}
 
       <NewPatientForm 

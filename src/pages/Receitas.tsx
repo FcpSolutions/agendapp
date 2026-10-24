@@ -107,7 +107,7 @@ export default function Receitas() {
           plano_saude,
           valor,
           observacoes,
-          patients!inner (
+          patients (
             id, 
             nome
           )

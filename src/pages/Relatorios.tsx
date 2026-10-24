@@ -1,64 +1,19 @@
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { relatorioService } from "@/services/documentService"
-import { DocumentTemplate, DocumentHistory } from "@/types/documents"
-import { Loader2, Plus, FileText, Clock, Settings, FileSignature } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { DocumentTemplate } from "@/types/documents"
+import { Clock, FileSignature } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { RelatorioForm } from "@/components/RelatorioForm"
 import { DocumentoSimples } from "@/components/DocumentoSimples"
 
 export default function Relatorios() {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([])
-  const [filteredTemplates, setFilteredTemplates] = useState<DocumentTemplate[]>([])
-  const [documentHistory, setDocumentHistory] = useState<DocumentHistory[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("simples")
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null)
   const [documentFormOpen, setDocumentFormOpen] = useState(false)
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
-
-  const fetchTemplates = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const templates = await relatorioService.getTemplates()
-      setTemplates(templates)
-      setFilteredTemplates(templates)
-    } catch (err) {
-      console.error('Erro ao buscar modelos:', err)
-      setError('Falha ao carregar modelos de relatórios')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredTemplates(templates)
-    } else {
-      const filtered = templates.filter(template => 
-        template.title.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredTemplates(filtered)
-    }
-  }, [searchTerm, templates])
-
-  const openDocumentForm = (template: DocumentTemplate) => {
-    setSelectedTemplate(template)
-    setDocumentFormOpen(true)
-  }
-
   const handleDocumentCreated = (documentId: string) => {
     // Atualizar para mostrar a aba de histórico
     setActiveTab("historico")
-    // TODO: Buscar o histórico de relatórios atualizado
   }
 
   return (

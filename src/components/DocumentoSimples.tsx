@@ -53,6 +53,7 @@ export function DocumentoSimples() {
         const { data: patientsData, error: patientsError } = await supabase
           .from('patients')
           .select('*')
+          .eq('ativo', true)
           .order('nome')
         
         if (!patientsError && patientsData) {

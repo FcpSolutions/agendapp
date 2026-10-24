@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -14,6 +15,32 @@ interface Patient {
 interface NewAppointmentFormProps {
   onClose: () => void
   isOpen: boolean
+}
+
+const DIAS_SEMANA = [
+  { value: '1', label: 'Segunda-feira' },
+  { value: '2', label: 'Terça-feira' },
+  { value: '3', label: 'Quarta-feira' },
+  { value: '4', label: 'Quinta-feira' },
+  { value: '5', label: 'Sexta-feira' },
+  { value: '6', label: 'Sábado' },
+  { value: '0', label: 'Domingo' },
+]
+
+function normalizarTexto(texto: string) {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+function montarSessoes(quantidade: number, atual: { dia: string; time: string }[], horaPadrao: string) {
+  const faltam = Math.max(0, quantidade - 1)
+  const proximas = atual.slice(0, faltam)
+  const usados = new Set(proximas.map((sessao) => sessao.dia))
+  while (proximas.length < faltam) {
+    const dia = DIAS_SEMANA.find((item) => !usados.has(item.value))?.value || '1'
+    usados.add(dia)
+    proximas.push({ dia, time: horaPadrao || '09:00' })
+  }
+  return proximas
 }
 
 export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps) {
@@ -32,10 +59,17 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
     convenio_operadora: '', // operadora do convênio
     is_recurring: false,
     recurrence_frequency: 'weekly', // weekly, biweekly, monthly
-    recurrence_count: '4' // número de repetições
+    recurrence_count: '4', // número de repetições
+    vezes_na_semana: '1'
   })
+  const [sessoesSemana, setSessoesSemana] = useState<{ dia: string; time: string }[]>([])
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const [buscaPaciente, setBuscaPaciente] = useState('')
+  const [listaAberta, setListaAberta] = useState(false)
+  const [posicaoLista, setPosicaoLista] = useState({ top: 0, left: 0, width: 0, maxHeight: 240 })
   const formRef = useRef<HTMLDivElement>(null)
+  const campoPacienteRef = useRef<HTMLInputElement>(null)
+  const listaPacientesRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
     fetchPatients()
@@ -71,6 +105,7 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
       const { data, error } = await supabase
         .from('patients')
         .select('id, nome')
+        .eq('ativo', true)
         .order('nome')
 
       if (error) throw error
@@ -96,6 +131,51 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
     }))
   }
 
+  const pacienteSelecionado = patients.find((patient) => patient.id === formData.patient_id)
+  const pacientesFiltrados = patients.filter((patient) =>
+    normalizarTexto(patient.nome).includes(normalizarTexto(buscaPaciente))
+  )
+
+  const atualizarPosicaoLista = () => {
+    const campo = campoPacienteRef.current
+    if (!campo) return
+    const rect = campo.getBoundingClientRect()
+    const espacoAbaixo = window.innerHeight - rect.bottom - 12
+    setPosicaoLista({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.max(160, Math.min(240, espacoAbaixo))
+    })
+  }
+
+  useEffect(() => {
+    if (!listaAberta) return
+
+    atualizarPosicaoLista()
+
+    const fecharAoClicarFora = (event: MouseEvent) => {
+      const alvo = event.target as Node
+      if (campoPacienteRef.current?.contains(alvo) || listaPacientesRef.current?.contains(alvo)) return
+      setListaAberta(false)
+    }
+
+    window.addEventListener('resize', atualizarPosicaoLista)
+    window.addEventListener('scroll', atualizarPosicaoLista, true)
+    document.addEventListener('mousedown', fecharAoClicarFora)
+    return () => {
+      window.removeEventListener('resize', atualizarPosicaoLista)
+      window.removeEventListener('scroll', atualizarPosicaoLista, true)
+      document.removeEventListener('mousedown', fecharAoClicarFora)
+    }
+  }, [listaAberta])
+
+  const selecionarPaciente = (patient: Patient) => {
+    handlePatientChange(patient.id)
+    setBuscaPaciente('')
+    setListaAberta(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -107,14 +187,64 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
       
       if (userError) throw new Error('Erro de autenticação: ' + userError.message)
       if (!user) throw new Error('Usuário não autenticado')
+      if (!formData.patient_id) throw new Error('Selecione um paciente')
       
       // Criar array de datas para consultas recorrentes
       const appointments = []
       const baseDate = new Date(`${formData.date}T${formData.time}`)
       
+      const criarConsulta = (appointmentDate: Date) => {
+        const year = appointmentDate.getFullYear()
+        const month = String(appointmentDate.getMonth() + 1).padStart(2, '0')
+        const day = String(appointmentDate.getDate()).padStart(2, '0')
+        const hours = String(appointmentDate.getHours()).padStart(2, '0')
+        const minutes = String(appointmentDate.getMinutes()).padStart(2, '0')
+        const seconds = String(appointmentDate.getSeconds()).padStart(2, '0')
+
+        return {
+          patient_id: formData.patient_id,
+          user_id: user.id,
+          date: `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`,
+          duration: parseInt(formData.duration),
+          notes: formData.notes,
+          value: parseFloat(formData.value),
+          patient_type: formData.patient_type,
+          convenio_nome: formData.patient_type === 'convenio' ? formData.convenio_nome : null,
+          convenio_operadora: formData.patient_type === 'convenio' ? formData.convenio_operadora : null,
+          status: 'scheduled',
+          paga: false
+        }
+      }
+
       if (formData.is_recurring) {
         const count = parseInt(formData.recurrence_count)
+        const semanal = formData.recurrence_frequency === 'weekly'
+        const vezes = semanal ? Math.min(7, Math.max(1, parseInt(formData.vezes_na_semana) || 1)) : 1
+
+        if (semanal && vezes > 1) {
+          const diaBase = String(baseDate.getDay())
+          const dias = [diaBase, ...sessoesSemana.slice(0, vezes - 1).map((sessao) => sessao.dia)]
+          if (dias.some((dia) => !dia) || new Set(dias).size !== dias.length) {
+            throw new Error('Escolha um dia diferente para cada atendimento da semana.')
+          }
+        }
+
         for (let i = 0; i < count; i++) {
+          if (semanal && vezes > 1) {
+            const semana = new Date(baseDate)
+            semana.setDate(baseDate.getDate() + (i * 7))
+            appointments.push(criarConsulta(semana))
+
+            sessoesSemana.slice(0, vezes - 1).forEach((sessao) => {
+              const data = new Date(semana)
+              data.setDate(semana.getDate() + (Number(sessao.dia) - semana.getDay()))
+              const [hora, minuto] = (sessao.time || formData.time).split(':')
+              data.setHours(Number(hora), Number(minuto), 0, 0)
+              appointments.push(criarConsulta(data))
+            })
+            continue
+          }
+
           const appointmentDate = new Date(baseDate)
           
           switch (formData.recurrence_frequency) {
@@ -129,28 +259,7 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
               break
           }
           
-          // Formatação manual da data para manter o fuso horário local
-          const year = appointmentDate.getFullYear();
-          const month = String(appointmentDate.getMonth() + 1).padStart(2, '0');
-          const day = String(appointmentDate.getDate()).padStart(2, '0');
-          const hours = String(appointmentDate.getHours()).padStart(2, '0');
-          const minutes = String(appointmentDate.getMinutes()).padStart(2, '0');
-          const seconds = String(appointmentDate.getSeconds()).padStart(2, '0');
-          
-          const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-          
-          appointments.push({
-            patient_id: formData.patient_id,
-            user_id: user.id,
-            date: formattedDate,
-            duration: parseInt(formData.duration),
-            notes: formData.notes,
-            value: parseFloat(formData.value),
-            patient_type: formData.patient_type,
-            convenio_nome: formData.patient_type === 'convenio' ? formData.convenio_nome : null,
-            convenio_operadora: formData.patient_type === 'convenio' ? formData.convenio_operadora : null,
-            status: 'scheduled'
-          })
+          appointments.push(criarConsulta(appointmentDate))
         }
       } else {
         // Formatação manual da data e hora para manter fuso horário local
@@ -174,10 +283,13 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
           patient_type: formData.patient_type,
           convenio_nome: formData.patient_type === 'convenio' ? formData.convenio_nome : null,
           convenio_operadora: formData.patient_type === 'convenio' ? formData.convenio_operadora : null,
-          status: 'scheduled'
+          status: 'scheduled',
+          paga: false
         })
       }
       
+      appointments.sort((a, b) => a.date.localeCompare(b.date))
+
       // Inserir todas as consultas
       const { data, error } = await supabase
         .from('appointments')
@@ -210,21 +322,61 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="patient_id">Paciente</Label>
-                <Select
-                  value={formData.patient_id}
-                  onValueChange={handlePatientChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um paciente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map(patient => (
-                      <SelectItem key={patient.id} value={patient.id}>
-                        {patient.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  ref={campoPacienteRef}
+                  id="patient_id"
+                  value={listaAberta ? buscaPaciente : (pacienteSelecionado?.nome ?? '')}
+                  onChange={(event) => {
+                    setBuscaPaciente(event.target.value)
+                    setListaAberta(true)
+                    if (formData.patient_id) handlePatientChange('')
+                  }}
+                  onFocus={() => {
+                    setBuscaPaciente('')
+                    setListaAberta(true)
+                  }}
+                  placeholder="Selecione um paciente"
+                  autoComplete="off"
+                  aria-expanded={listaAberta}
+                  aria-controls="lista-pacientes-consulta"
+                  role="combobox"
+                />
+                {listaAberta && createPortal(
+                  <ul
+                    ref={listaPacientesRef}
+                    id="lista-pacientes-consulta"
+                    role="listbox"
+                    style={{
+                      top: posicaoLista.top,
+                      left: posicaoLista.left,
+                      width: posicaoLista.width,
+                      maxHeight: posicaoLista.maxHeight
+                    }}
+                    className="fixed z-[80] overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-md"
+                  >
+                    {pacientesFiltrados.length === 0 ? (
+                      <li className="px-3 py-2 text-sm text-gray-500">Nenhum paciente encontrado</li>
+                    ) : (
+                      pacientesFiltrados.map((patient) => (
+                        <li key={patient.id}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={patient.id === formData.patient_id}
+                            className="w-full px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+                            onMouseDown={(event) => {
+                              event.preventDefault()
+                              selecionarPaciente(patient)
+                            }}
+                          >
+                            {patient.nome}
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>,
+                  document.body
+                )}
               </div>
 
               <div className="space-y-2">
@@ -370,8 +522,85 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
                     </Select>
                   </div>
 
+                  {formData.recurrence_frequency === 'weekly' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="vezes_na_semana">Quantidade de vezes na semana</Label>
+                      <Select
+                        value={formData.vezes_na_semana}
+                        onValueChange={(value) => {
+                          setFormData(prev => ({ ...prev, vezes_na_semana: value }))
+                          setSessoesSemana(montarSessoes(parseInt(value), sessoesSemana, formData.time))
+                        }}
+                      >
+                        <SelectTrigger id="vezes_na_semana">
+                          <SelectValue placeholder="Selecione a quantidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7].map((quantidade) => (
+                            <SelectItem key={quantidade} value={String(quantidade)}>
+                              {quantidade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {formData.recurrence_frequency === 'weekly' && Number(formData.vezes_na_semana) > 1 && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600">
+                        A primeira vez usa a data e o horário informados acima. Escolha os outros dias da semana.
+                      </p>
+                      {sessoesSemana.map((sessao, index) => (
+                        <div key={index} className="grid grid-cols-2 gap-2">
+                          <div className="space-y-2">
+                            <Label htmlFor={`dia-semana-${index}`}>{index + 2}ª vez</Label>
+                            <Select
+                              value={sessao.dia}
+                              onValueChange={(value) => {
+                                setSessoesSemana((atual) => atual.map((item, itemIndex) => (
+                                  itemIndex === index ? { ...item, dia: value } : item
+                                )))
+                              }}
+                            >
+                              <SelectTrigger id={`dia-semana-${index}`}>
+                                <SelectValue placeholder="Dia" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DIAS_SEMANA.map((dia) => (
+                                  <SelectItem key={dia.value} value={dia.value}>
+                                    {dia.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`hora-semana-${index}`}>Horário</Label>
+                            <Input
+                              id={`hora-semana-${index}`}
+                              type="time"
+                              value={sessao.time}
+                              onChange={(event) => {
+                                const valor = event.target.value
+                                setSessoesSemana((atual) => atual.map((item, itemIndex) => (
+                                  itemIndex === index ? { ...item, time: valor } : item
+                                )))
+                              }}
+                              required
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="space-y-2">
-                    <Label htmlFor="recurrence_count">Número de Repetições</Label>
+                    <Label htmlFor="recurrence_count">
+                      {formData.recurrence_frequency === 'weekly' && Number(formData.vezes_na_semana) > 1
+                        ? 'Número de semanas'
+                        : 'Número de Repetições'}
+                    </Label>
                     <Input
                       id="recurrence_count"
                       name="recurrence_count"

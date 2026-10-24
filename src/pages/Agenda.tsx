@@ -16,6 +16,7 @@ interface Appointment {
   status: string
   notes: string
   value: number
+  paga?: boolean
   patient_type?: string
   convenio_nome?: string
   convenio_operadora?: string
@@ -40,6 +41,7 @@ export default function Agenda() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 7))
+  const [somenteEmAberto, setSomenteEmAberto] = useState(false)
 
   useEffect(() => {
     fetchAppointments()
@@ -59,6 +61,10 @@ export default function Agenda() {
     
     setFilteredAppointments(filtered);
   }, [searchTerm, operadoraFilter, tipoFilter, appointments]);
+
+  const consultasExibidas = somenteEmAberto
+    ? filteredAppointments.filter((appointment) => !appointment.paga)
+    : filteredAppointments
 
   const fetchAppointments = async () => {
     try {
@@ -103,6 +109,7 @@ export default function Agenda() {
           notes,
           patient_id,
           value,
+          paga,
           patient_type,
           convenio_nome,
           convenio_operadora,
@@ -158,6 +165,7 @@ export default function Agenda() {
           notes: appointment.notes,
           patient_id: appointment.patient_id,
           value: appointment.value || 0,
+          paga: appointment.paga === true,
           patient_type: appointment.patient_type || 'particular',
           convenio_nome: appointment.convenio_nome || '',
           convenio_operadora: appointment.convenio_operadora || '',
@@ -194,6 +202,24 @@ export default function Agenda() {
     } catch (err) {
       console.error('Erro ao excluir consulta:', err)
       alert('Erro ao excluir consulta')
+    }
+  }
+
+  const handleTogglePaga = async (appointment: Appointment, paga: boolean) => {
+    const anteriores = appointments
+    setAppointments(appointments.map((item) => (
+      item.id === appointment.id ? { ...item, paga } : item
+    )))
+
+    const { error } = await supabase
+      .from('appointments')
+      .update({ paga })
+      .eq('id', appointment.id)
+
+    if (error) {
+      console.error('Erro ao atualizar pagamento:', error)
+      setAppointments(anteriores)
+      setError('Não foi possível atualizar o pagamento da consulta.')
     }
   }
 
@@ -405,7 +431,7 @@ export default function Agenda() {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="bg-blue-50 rounded-lg px-4 py-2">
                   <p className="text-sm font-medium text-blue-600">Total de Consultas</p>
                   <p className="text-2xl font-bold text-blue-700">{filteredAppointments.length}</p>
@@ -431,9 +457,21 @@ export default function Agenda() {
                 <div className="bg-purple-50 rounded-lg px-4 py-2">
                   <p className="text-sm font-medium text-purple-600">Valor Total</p>
                   <p className="text-2xl font-bold text-purple-700">
-                    R$ {filteredAppointments.reduce((acc, curr) => acc + curr.value, 0).toFixed(2)}
+                    R$ {filteredAppointments.filter((item) => item.paga).reduce((acc, curr) => acc + curr.value, 0).toFixed(2)}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSomenteEmAberto((atual) => !atual)}
+                  aria-pressed={somenteEmAberto}
+                  title="Mostrar somente as consultas em aberto do período mensal selecionado"
+                  className={`rounded-lg bg-amber-50 px-4 py-2 text-left ${somenteEmAberto ? 'ring-2 ring-amber-500' : ''}`}
+                >
+                  <p className="text-sm font-medium text-amber-700">Valores em Aberto</p>
+                  <p className="text-2xl font-bold text-amber-800">
+                    R$ {filteredAppointments.filter((item) => !item.paga).reduce((acc, curr) => acc + curr.value, 0).toFixed(2)}
+                  </p>
+                </button>
               </div>
             </div>
           </div>
@@ -459,17 +497,26 @@ export default function Agenda() {
                   <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
                     Status
                   </th>
-                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">
                     Valor
                   </th>
-                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                  <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                    Consulta Paga
+                  </th>
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">
                     Ações
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAppointments.map((appointment) => (
-                  <tr key={appointment.id}>
+                {consultasExibidas.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-3 py-6 text-center text-sm text-gray-500">
+                      Nenhuma consulta em aberto neste período.
+                    </td>
+                  </tr>
+                ) : consultasExibidas.map((appointment) => (
+                  <tr key={appointment.id} className={appointment.paga ? 'bg-green-50' : undefined}>
                     <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-500">
                       <div className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1 text-gray-400" />
@@ -510,6 +557,15 @@ export default function Agenda() {
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-500">
                       R$ {appointment.value.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-center">
+                      <input
+                        type="checkbox"
+                        checked={appointment.paga === true}
+                        onChange={(event) => handleTogglePaga(appointment, event.target.checked)}
+                        aria-label={`Consulta paga de ${appointment.patient?.nome || 'paciente'}`}
+                        className="h-4 w-4 accent-green-600"
+                      />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-right text-xs font-medium">
                       <div className="flex justify-end space-x-1">

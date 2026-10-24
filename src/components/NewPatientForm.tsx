@@ -14,6 +14,9 @@ interface NewPatientFormProps {
     data_nascimento: string
     email: string
     telefone: string
+    tipo_paciente?: string
+    convenio_nome?: string
+    convenio_operadora?: string
     endereco: {
       cep: string
       logradouro: string
@@ -35,6 +38,9 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
     data_nascimento: '',
     email: '',
     telefone: '',
+    tipo_paciente: 'particular',
+    convenio_nome: '',
+    convenio_operadora: '',
     endereco: {
       cep: '',
       logradouro: '',
@@ -55,6 +61,9 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
         data_nascimento: editingPatient.data_nascimento || '',
         email: editingPatient.email,
         telefone: editingPatient.telefone,
+        tipo_paciente: editingPatient.tipo_paciente === 'convenio' ? 'convenio' : 'particular',
+        convenio_nome: editingPatient.convenio_nome || '',
+        convenio_operadora: editingPatient.convenio_operadora || '',
         endereco: editingPatient.endereco || {
           cep: '',
           logradouro: '',
@@ -73,6 +82,9 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
         data_nascimento: '',
         email: '',
         telefone: '',
+        tipo_paciente: 'particular',
+        convenio_nome: '',
+        convenio_operadora: '',
         endereco: {
           cep: '',
           logradouro: '',
@@ -167,14 +179,18 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
         throw new Error('Usuário não autenticado')
       }
 
+      const dadosPaciente = {
+        ...formData,
+        user_id: user.id,
+        convenio_nome: formData.tipo_paciente === 'convenio' ? formData.convenio_nome : null,
+        convenio_operadora: formData.tipo_paciente === 'convenio' ? formData.convenio_operadora : null,
+      }
+
       if (editingPatient) {
         // Atualizar paciente existente
         const { error } = await supabase
           .from('patients')
-          .update({
-            ...formData,
-            user_id: user.id
-          })
+          .update(dadosPaciente)
           .eq('id', editingPatient.id)
 
         if (error) throw error
@@ -183,8 +199,8 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
         const { error } = await supabase
           .from('patients')
           .insert([{
-            ...formData,
-            user_id: user.id
+            ...dadosPaciente,
+            ativo: true
           }])
 
         if (error) throw error
@@ -202,7 +218,7 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">{editingPatient ? 'Editar Paciente' : 'Novo Paciente'}</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -255,6 +271,59 @@ export function NewPatientForm({ onClose, isOpen, editingPatient }: NewPatientFo
                 placeholder="email@exemplo.com"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de paciente</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, tipo_paciente: 'particular' }))}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium ${
+                    formData.tipo_paciente === 'particular'
+                      ? 'border-[#0f9f8f] bg-[#e7f7f4] text-[#0d8a7c]'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  Particular
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, tipo_paciente: 'convenio' }))}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium ${
+                    formData.tipo_paciente === 'convenio'
+                      ? 'border-[#5b4bd6] bg-[#efedff] text-[#5b4bd6]'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  Convênio
+                </button>
+              </div>
+            </div>
+
+            {formData.tipo_paciente === 'convenio' && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="convenio_nome">Convênio</Label>
+                  <Input
+                    id="convenio_nome"
+                    name="convenio_nome"
+                    value={formData.convenio_nome}
+                    onChange={handleChange}
+                    placeholder="Nome do plano"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="convenio_operadora">Operadora</Label>
+                  <Input
+                    id="convenio_operadora"
+                    name="convenio_operadora"
+                    value={formData.convenio_operadora}
+                    onChange={handleChange}
+                    placeholder="Operadora"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="telefone">Telefone</Label>

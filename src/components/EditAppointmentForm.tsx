@@ -106,10 +106,20 @@ export function EditAppointmentForm({ appointment, onClose, isOpen, onSuccess }:
       const { data, error } = await supabase
         .from('patients')
         .select('id, nome')
+        .eq('ativo', true)
         .order('nome')
 
       if (error) throw error
-      setPatients(data || [])
+      const lista = data || []
+      if (appointment.patient_id && !lista.some((item) => item.id === appointment.patient_id)) {
+        const { data: atual } = await supabase
+          .from('patients')
+          .select('id, nome')
+          .eq('id', appointment.patient_id)
+          .maybeSingle()
+        if (atual) lista.unshift(atual)
+      }
+      setPatients(lista)
     } catch (error) {
       console.error('Erro ao carregar pacientes:', error)
       setError('Erro ao carregar lista de pacientes')

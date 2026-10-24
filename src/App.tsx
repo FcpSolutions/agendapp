@@ -5,6 +5,7 @@ import Login from './components/Login'
 import Register from './components/Register'
 import { ForgotPassword } from './components/ForgotPassword'
 import Dashboard from './components/Dashboard'
+import Evolucao from "./pages/Evolucao"
 
 // Habilitar flags futuras do React Router
 import { UNSAFE_NavigationContext as NavigationContext } from 'react-router-dom';
@@ -63,6 +64,9 @@ function App() {
           path="/"
           element={<Navigate to={session ? "/dashboard" : "/login"} replace />}
         />
+
+        {/* Novas rotas */}
+        <Route path="/evolucao" element={<Evolucao />} />
       </Routes>
     </Router>
   )

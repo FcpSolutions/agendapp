@@ -42,6 +42,7 @@ export function NewReceitaForm({ isOpen, onClose, onSuccess }: NewReceitaFormPro
       const { data, error } = await supabase
         .from('patients')
         .select('id, nome')
+        .eq('ativo', true)
         .order('nome')
       
       if (error) throw error
