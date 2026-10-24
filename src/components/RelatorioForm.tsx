@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox'
 import { relatorioService } from '@/services/documentService'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Loader2, FileText, ArrowLeft, Download, Save } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -28,7 +27,7 @@ export function RelatorioForm({ template, onClose, onSuccess }: RelatorioFormPro
   
   const [fieldValues, setFieldValues] = useState<FieldValues>({})
   const [selectedPatient, setSelectedPatient] = useState<string>('')
-  const { user } = useAuth()
+  const { user, loading: carregandoUsuario } = useAuth()
 
   // Inicializar valores dos campos com os valores padrão do template
   useEffect(() => {
@@ -70,8 +69,13 @@ export function RelatorioForm({ template, onClose, onSuccess }: RelatorioFormPro
   // Buscar dados do profissional logado
   useEffect(() => {
     const fetchProfileData = async () => {
+      if (carregandoUsuario) return
+      if (!user) {
+        setError('Não foi possível identificar o profissional logado.')
+        return
+      }
+
       try {
-        if (!user) return
         
         const { data, error } = await supabase
           .from('profiles')
@@ -97,11 +101,12 @@ export function RelatorioForm({ template, onClose, onSuccess }: RelatorioFormPro
         }
       } catch (err) {
         console.error('Erro ao buscar dados do perfil:', err)
+        setError('Não foi possível carregar os dados do profissional.')
       }
     }
     
     fetchProfileData()
-  }, [template, user])
+  }, [template, user, carregandoUsuario])
 
   const handleInputChange = (fieldId: string, value: string | number | boolean) => {
     setFieldValues(prev => ({
@@ -168,16 +173,19 @@ export function RelatorioForm({ template, onClose, onSuccess }: RelatorioFormPro
     try {
       setLoading(true)
       setError(null)
+
+      if (!user) {
+        setError('Usuário não autenticado')
+        return
+      }
       
-      // A propriedade user_id será adicionada automaticamente pelo serviço
-      // usando o usuário autenticado atual
       const documentData = {
         template_id: template.id,
         patient_id: selectedPatient,
         title: template.title,
         content: generatedDocument,
         field_values: fieldValues,
-        user_id: '' // Este valor será substituído pelo serviço
+        user_id: user.id
       }
       
       const savedDocument = await relatorioService.saveDocument(documentData)

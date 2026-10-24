@@ -158,6 +158,19 @@ export function NewFichaClinicaForm({ isOpen, onClose }: NewFichaClinicaFormProp
       if (!user) throw new Error('Usuário não autenticado')
       if (!formData.patient_id) throw new Error('Selecione um paciente')
 
+      const { data: pacienteAtual, error: pacienteError } = await supabase
+        .from('patients')
+        .select('id, ativo')
+        .eq('id', formData.patient_id)
+        .maybeSingle()
+
+      if (pacienteError) throw pacienteError
+      if (!pacienteAtual || pacienteAtual.ativo === false) {
+        handlePatientChange('')
+        await fetchPatients()
+        throw new Error('Este paciente foi inativado. Selecione um paciente ativo para a ficha.')
+      }
+
       const { error } = await supabase
         .from('fichas_clinicas')
         .insert([

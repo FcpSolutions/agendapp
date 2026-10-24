@@ -206,8 +206,8 @@ export default function Agenda() {
   }
 
   const handleTogglePaga = async (appointment: Appointment, paga: boolean) => {
-    const anteriores = appointments
-    setAppointments(appointments.map((item) => (
+    const pagaAnterior = appointment.paga === true
+    setAppointments((atual) => atual.map((item) => (
       item.id === appointment.id ? { ...item, paga } : item
     )))
 
@@ -218,7 +218,9 @@ export default function Agenda() {
 
     if (error) {
       console.error('Erro ao atualizar pagamento:', error)
-      setAppointments(anteriores)
+      setAppointments((atual) => atual.map((item) => (
+        item.id === appointment.id ? { ...item, paga: pagaAnterior } : item
+      )))
       setError('Não foi possível atualizar o pagamento da consulta.')
     }
   }

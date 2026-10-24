@@ -44,7 +44,7 @@ export function PerfilDocumentos() {
       // Upload do papel timbrado se selecionado
       if (papelTimbrado) {
         const fileName = `${user.id}_${Date.now()}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('letterheads')
           .upload(fileName, papelTimbrado)
         
@@ -60,7 +60,7 @@ export function PerfilDocumentos() {
       // Upload da assinatura se selecionada
       if (assinatura) {
         const fileName = `${user.id}_${Date.now()}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('signatures')
           .upload(fileName, assinatura)
         

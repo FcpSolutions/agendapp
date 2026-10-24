@@ -301,6 +301,7 @@ export default function DashboardHome() {
   const [horaEdicao, setHoraEdicao] = useState('')
   const intervaloRef = useRef({ inicio: dataHojeISO(), fim: dataHojeISO() })
   const arrastouRef = useRef(false)
+  const consultaPedidoRef = useRef(0)
 
   const mesSelecionado = parseDataLocal(dataSelecionada || dataHojeISO())
   const inicioSemana = dataHojeISO()
@@ -770,21 +771,24 @@ export default function DashboardHome() {
   }
 
   async function fetchConsultasFiltradas() {
+    const pedido = ++consultaPedidoRef.current
     const { inicio, fim } = intervaloRef.current
 
     if (!inicio || !fim || inicio > fim) {
-      setConsultasDoDia([])
+      if (pedido === consultaPedidoRef.current) setConsultasDoDia([])
       return
     }
 
     try {
       setCarregandoConsultas(true)
       const consultas = await buscarConsultas(inicio, fim)
+      if (pedido !== consultaPedidoRef.current) return
       setConsultasDoDia(consultas)
     } catch (err) {
+      if (pedido !== consultaPedidoRef.current) return
       console.error('Erro ao buscar consultas do período:', err)
     } finally {
-      setCarregandoConsultas(false)
+      if (pedido === consultaPedidoRef.current) setCarregandoConsultas(false)
     }
   }
 

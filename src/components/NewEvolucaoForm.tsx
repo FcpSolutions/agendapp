@@ -124,6 +124,20 @@ export function NewEvolucaoForm({ isOpen, onClose }: NewEvolucaoFormProps) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) throw new Error('Usuário não autenticado')
+
+      const { data: pacienteAtual, error: pacienteError } = await supabase
+        .from('patients')
+        .select('id, ativo')
+        .eq('id', formData.patient_id)
+        .maybeSingle()
+
+      if (pacienteError) throw pacienteError
+      if (!pacienteAtual || pacienteAtual.ativo === false) {
+        setError('Este paciente foi inativado. Selecione um paciente ativo para registrar a evolução.')
+        handleSelectChange('')
+        await fetchPatients()
+        return
+      }
       
       const { error: insertError } = await supabase
         .from('evolucoes')

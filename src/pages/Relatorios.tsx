@@ -8,10 +8,10 @@ import { DocumentoSimples } from "@/components/DocumentoSimples"
 
 export default function Relatorios() {
   const [activeTab, setActiveTab] = useState("simples")
-  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null)
+  const [selectedTemplate] = useState<DocumentTemplate | null>(null)
   const [documentFormOpen, setDocumentFormOpen] = useState(false)
 
-  const handleDocumentCreated = (documentId: string) => {
+  const handleDocumentCreated = () => {
     // Atualizar para mostrar a aba de histórico
     setActiveTab("historico")
   }

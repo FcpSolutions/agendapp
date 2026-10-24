@@ -31,6 +31,14 @@ function normalizarTexto(texto: string) {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
+function dataNoDiaDaSemana(base: Date, diaSemana: number) {
+  const data = new Date(base)
+  const indiceBase = base.getDay() === 0 ? 6 : base.getDay() - 1
+  const indiceAlvo = diaSemana === 0 ? 6 : diaSemana - 1
+  data.setDate(base.getDate() + (indiceAlvo - indiceBase))
+  return data
+}
+
 function montarSessoes(quantidade: number, atual: { dia: string; time: string }[], horaPadrao: string) {
   const faltam = Math.max(0, quantidade - 1)
   const proximas = atual.slice(0, faltam)
@@ -188,6 +196,19 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
       if (userError) throw new Error('Erro de autenticação: ' + userError.message)
       if (!user) throw new Error('Usuário não autenticado')
       if (!formData.patient_id) throw new Error('Selecione um paciente')
+
+      const { data: pacienteAtual, error: pacienteError } = await supabase
+        .from('patients')
+        .select('id, ativo')
+        .eq('id', formData.patient_id)
+        .maybeSingle()
+
+      if (pacienteError) throw pacienteError
+      if (!pacienteAtual || pacienteAtual.ativo === false) {
+        handlePatientChange('')
+        await fetchPatients()
+        throw new Error('Este paciente foi inativado. Selecione um paciente ativo para agendar.')
+      }
       
       // Criar array de datas para consultas recorrentes
       const appointments = []
@@ -236,8 +257,7 @@ export function NewAppointmentForm({ onClose, isOpen }: NewAppointmentFormProps)
             appointments.push(criarConsulta(semana))
 
             sessoesSemana.slice(0, vezes - 1).forEach((sessao) => {
-              const data = new Date(semana)
-              data.setDate(semana.getDate() + (Number(sessao.dia) - semana.getDay()))
+              const data = dataNoDiaDaSemana(semana, Number(sessao.dia))
               const [hora, minuto] = (sessao.time || formData.time).split(':')
               data.setHours(Number(hora), Number(minuto), 0, 0)
               appointments.push(criarConsulta(data))

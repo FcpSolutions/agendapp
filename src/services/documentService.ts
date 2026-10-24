@@ -1,6 +1,31 @@
 import { supabase } from '@/lib/supabase';
 import { DocumentTemplate, DocumentHistory, FieldValues } from '@/types/documents';
 
+function sanitizarHtml(html: string) {
+  if (typeof DOMParser === 'undefined') return ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.querySelectorAll('script, iframe, object, embed, link, meta, base').forEach((el) => el.remove())
+  doc.querySelectorAll('*').forEach((el) => {
+    for (const attr of [...el.attributes]) {
+      const nome = attr.name.toLowerCase()
+      const valor = attr.value.replace(/\s/g, '').toLowerCase()
+      if (nome.startsWith('on') || valor.includes('javascript:') || valor.startsWith('data:text/html')) {
+        el.removeAttribute(attr.name)
+      }
+    }
+  })
+  return doc.body.innerHTML
+}
+
+function escaparHtml(texto: string) {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /**
  * Serviço para gerenciar modelos de relatórios e histórico
  */
@@ -107,11 +132,16 @@ export const relatorioService = {
    * Salva um relatório no histórico
    */
   async saveDocument(document: Omit<DocumentHistory, 'id' | 'created_at'>): Promise<DocumentHistory> {
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (!userId) {
+      throw new Error('Usuário não autenticado')
+    }
+
     const { data, error } = await supabase
       .from('document_history')
       .insert({
         ...document,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: userId,
       })
       .select()
       .single();
@@ -166,12 +196,13 @@ export const relatorioService = {
   generateDocumentHtml(templateHtml: string, fieldValues: FieldValues): string {
     let html = templateHtml;
     
-    // Substitui as variáveis no template pelos valores inseridos
     Object.entries(fieldValues).forEach(([key, value]) => {
-      html = html.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+      const chave = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const texto = escaparHtml(String(value ?? '')).replace(/\n/g, '<br>')
+      html = html.replace(new RegExp(`{{${chave}}}`, 'g'), texto)
     });
     
-    return html;
+    return sanitizarHtml(html);
   },
   
   /**

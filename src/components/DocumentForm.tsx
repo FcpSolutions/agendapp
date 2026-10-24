@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox'
 import { documentService } from '@/services/documentService'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Loader2, FileText, ArrowLeft } from 'lucide-react'
 
 interface DocumentFormProps {
@@ -97,6 +96,7 @@ export function DocumentForm({ template, onClose, onSuccess }: DocumentFormProps
         }
       } catch (err) {
         console.error('Erro ao buscar dados do perfil:', err)
+        setError('Não foi possível carregar os dados do profissional.')
       }
     }
     
@@ -154,16 +154,20 @@ export function DocumentForm({ template, onClose, onSuccess }: DocumentFormProps
     try {
       setLoading(true)
       setError(null)
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setError('Usuário não autenticado')
+        return
+      }
       
-      // A propriedade user_id será adicionada automaticamente pelo serviço
-      // usando o usuário autenticado atual
       const documentData = {
         template_id: template.id,
         patient_id: selectedPatient,
         title: template.title,
         content: generatedDocument,
         field_values: fieldValues,
-        user_id: '' // Este valor será substituído pelo serviço
+        user_id: user.id
       }
       
       const savedDocument = await documentService.saveDocument(documentData)

@@ -2,11 +2,9 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { documentService } from "@/services/documentService"
-import { DocumentTemplate, DocumentHistory } from "@/types/documents"
+import { DocumentTemplate } from "@/types/documents"
 import { Loader2, Plus, FileText, Settings, Clock } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { DocumentForm } from "@/components/DocumentForm"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 
@@ -15,7 +13,6 @@ export default function Documentos() {
   const [error, setError] = useState<string | null>(null)
   const [templates, setTemplates] = useState<DocumentTemplate[]>([])
   const [filteredTemplates, setFilteredTemplates] = useState<DocumentTemplate[]>([])
-  const [documentHistory, setDocumentHistory] = useState<DocumentHistory[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("criar")
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null)
@@ -56,7 +53,7 @@ export default function Documentos() {
     setDocumentFormOpen(true)
   }
 
-  const handleDocumentCreated = (documentId: string) => {
+  const handleDocumentCreated = () => {
     // Atualizar para mostrar a aba de histórico
     setActiveTab("historico")
     // TODO: Buscar o histórico de documentos atualizado
